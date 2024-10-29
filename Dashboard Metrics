@@ -3,15 +3,15 @@ WITH monthly_marketing_costs AS (
     SELECT 
         date AS month,
         marketing_source,
-        marketing_costs AS total_marketing_cost  -- Use direct value without SUM
+        marketing_costs AS total_marketing_cost  
     FROM 
         `gostudent-439713.database.marketing_costs_dataset`
 ),
 monthly_sales_costs AS (
     SELECT 
         month,
-        total_sales_costs AS total_sales_cost,  -- Use direct value without SUM
-        trial_costs AS total_trial_cost  -- Use direct value without SUM
+        total_sales_costs AS total_sales_cost, 
+        trial_costs AS total_trial_cost  
     FROM 
         `gostudent-439713.database.sales_cost_dataset`
 )
@@ -23,19 +23,19 @@ SELECT
 
     msc.total_sales_cost + msc.total_trial_cost AS sales_cost,
 
-    -- Use direct cost values without SUM for CPL
+   
     (mmc.total_marketing_cost + msc.total_sales_cost + msc.total_trial_cost) / COUNT(DISTINCT l.contact_id) AS CPL,
     
-    -- mCAC calculation with direct marketing costs
+
     mmc.total_marketing_cost / COUNT(DISTINCT c.contact_id) AS mCAC,
     
-    -- sCAC calculation with direct sales costs
+
     msc.total_sales_cost / COUNT(DISTINCT c.contact_id) AS sCAC,
     
-    -- Average CLV based on customer data
+
     AVG(cl.avg_clv) AS CLV,
     
-    -- CLV:CAC Ratio with direct mCAC and sCAC values
+
     (AVG(cl.avg_clv) / ((mmc.total_marketing_cost / COUNT(DISTINCT c.contact_id)) + (msc.total_sales_cost / COUNT(DISTINCT c.contact_id)))) AS CLV_CAC_Ratio
 FROM 
     `gostudent-439713.database.lead_dataset_cleaned` l
@@ -57,13 +57,12 @@ SELECT
     FORMAT_TIMESTAMP('%Y-%m', l.create_date) AS month,
     l.marketing_source,
 
-    -- Overall Lead-to-Trial Conversion Rate
     (SUM(CASE WHEN c.trial_booked = 1 THEN 1 ELSE 0 END) / COUNT(DISTINCT l.contact_id)) * 100 AS Lead_to_Trial_Conversion_Rate,
     
-    -- Overall Trial-to-Customer Conversion Rate
+  
     (COUNT(DISTINCT cu.contact_id) / NULLIF(SUM(CASE WHEN c.trial_booked = 1 THEN 1 ELSE 0 END), 0)) * 100 AS Trial_to_Customer_Conversion_Rate,
     
-    -- Overall Average Contract Length
+
     AVG(cu.contract_length) AS Average_Contract_Length
     
 FROM 
@@ -93,13 +92,12 @@ SELECT
         ELSE 'Unknown City'
     END AS city_status,
 
-    -- Lead-to-Trial Conversion Rate by test group and city status
     (SUM(CASE WHEN c.trial_booked = 1 THEN 1 ELSE 0 END) / COUNT(DISTINCT l.contact_id)) * 100 AS Lead_to_Trial_Conversion_Rate,
     
-    -- Trial-to-Customer Conversion Rate by test group and city status
+ 
     (COUNT(DISTINCT cu.contact_id) / NULLIF(SUM(CASE WHEN c.trial_booked = 1 THEN 1 ELSE 0 END), 0)) * 100 AS Trial_to_Customer_Conversion_Rate,
     
-    -- Average Contract Length by test group and city status
+ 
     AVG(cu.contract_length) AS Average_Contract_Length
     
 FROM 
@@ -117,13 +115,13 @@ CREATE OR REPLACE VIEW `gostudent-439713.database.sales_efficiency_over_time_vie
 SELECT 
     FORMAT_TIMESTAMP('%Y-%m', c.trial_date) AS month,
     
-    -- Calls per Lead over time
+    -- Calls per Lead 
     SUM(c.call_attempts) / COUNT(DISTINCT c.contact_id) AS Calls_per_Lead,
     
-    -- Call Duration per Lead over time
+    -- Call Duration per Lead 
     SUM(c.total_call_duration) / COUNT(DISTINCT c.contact_id) AS Call_Duration_per_Lead,
     
-    -- Reached Call Rate over time
+    -- Reached Call Rate 
     (SUM(c.calls_30) / NULLIF(SUM(c.call_attempts), 0)) * 100 AS Reached_Call_Rate,
     
     -- Conversion per Call over time
@@ -146,37 +144,36 @@ GROUP BY
 CREATE OR REPLACE VIEW `gostudent-439713.database.sales_efficiency_over_time_view_detailed` AS
 SELECT 
     FORMAT_TIMESTAMP('%Y-%m', c.trial_date) AS month,
-    l.marketing_source,  -- Adding marketing source as a dimension
+    l.marketing_source,  
     
-    -- Calls per Lead over time by marketing source
+    
     SUM(c.call_attempts) / COUNT(DISTINCT c.contact_id) AS Calls_per_Lead,
     
-    -- Call Duration per Lead over time by marketing source
+
     SUM(c.total_call_duration) / COUNT(DISTINCT c.contact_id) AS Call_Duration_per_Lead,
     
-    -- Reached Call Rate over time by marketing source
+
     (SUM(c.calls_30) / NULLIF(SUM(c.call_attempts), 0)) * 100 AS Reached_Call_Rate,
     
-    -- Conversion per Call over time by marketing source
+
     COUNT(DISTINCT cu.contact_id) / NULLIF(SUM(c.call_attempts), 0) AS Conversion_per_Call,
     
-    -- Average Calls to Conversion by marketing source
+
     SUM(c.call_attempts) / NULLIF(COUNT(DISTINCT cu.contact_id), 0) AS Avg_Calls_to_Conversion,
     
     
-    -- Average Call Duration per Attempt by marketing source
+
     AVG(c.total_call_duration / NULLIF(c.call_attempts, 0)) AS Avg_Call_Duration_per_Attempt,
     
-    -- Average Calls per Customer by marketing source
+
     SUM(c.call_attempts) / NULLIF(COUNT(DISTINCT cu.contact_id), 0) AS Avg_Calls_per_Customer,
 
-    -- Total Call Attempts by marketing source
+
     SUM(c.call_attempts) AS Total_Call_Attempts,
 
-    -- Total Duration of Calls by marketing source
+
     SUM(c.total_call_duration) AS Total_Call_Duration,
 
-    -- Total Reached Calls (Over 30 Seconds) by marketing source
     SUM(c.calls_30) AS Total_Reached_Calls
 
 FROM 
@@ -184,9 +181,9 @@ FROM
 LEFT JOIN 
     `gostudent-439713.database.customer_dataset_cleaned` cu ON c.contact_id = cu.contact_id
 LEFT JOIN 
-    `gostudent-439713.database.lead_dataset_cleaned` l ON c.contact_id = l.contact_id  -- Joining to get marketing source
+    `gostudent-439713.database.lead_dataset_cleaned` l ON c.contact_id = l.contact_id  
 WHERE 
-    FORMAT_TIMESTAMP('%Y-%m', c.trial_date) NOT IN ('2023-04', '2022-07')  -- Exclude April 2023 and July 2022
+    FORMAT_TIMESTAMP('%Y-%m', c.trial_date) NOT IN ('2023-04', '2022-07')  -- Exclude April 2023 and July 2022/ outliers
 GROUP BY 
     month, l.marketing_source
 ORDER BY 
